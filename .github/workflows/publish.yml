@@ -16,13 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      # Node 24 (npm 11+) is required for OIDC trusted publishing; Node 22's
+      # bundled npm 10 fails the publish with a misleading E404/ENEEDAUTH.
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
-          # NOTE: do NOT set registry-url for an OIDC-only publish. setup-node
-          # then writes an .npmrc with _authToken=${NODE_AUTH_TOKEN} and exports
-          # a placeholder token, which npm prefers over the OIDC exchange and
-          # surfaces as a misleading 404 on the PUT.
+          node-version: 24
+          registry-url: https://registry.npmjs.org
 
       - name: Verify package contents
         run: npm pack --dry-run
