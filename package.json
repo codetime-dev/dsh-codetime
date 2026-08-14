@@ -5,6 +5,10 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codetime-dev/dsh-codetime.git"
+  },
   "type": "module",
   "main": "lib/index.js",
   "exports": {
