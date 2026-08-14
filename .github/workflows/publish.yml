@@ -19,7 +19,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
+          # NOTE: do NOT set registry-url for an OIDC-only publish. setup-node
+          # then writes an .npmrc with _authToken=${NODE_AUTH_TOKEN} and exports
+          # a placeholder token, which npm prefers over the OIDC exchange and
+          # surfaces as a misleading 404 on the PUT.
 
       - name: Verify package contents
         run: npm pack --dry-run
