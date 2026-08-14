@@ -90,3 +90,41 @@ machine on the dashboard (created on first use, shared with the CLI).
 - No redaction rules are shipped: records leave the process exactly as captured
   by the seam. Mount your own `session-telemetry/record` waterfall rules if you
   export beyond a trusted boundary.
+
+## Publishing (npm)
+
+Publishing runs through GitHub Actions using an npm **Trusted Publisher**
+(OIDC): the workflow requests a short-lived token with `id-token: write`, so no
+npm token is ever stored in the repository.
+
+### One-time npm setup
+
+1. If `dsh-codetime` does not exist on npm yet, publish the first version once
+   from the command line to create it:
+
+   ```sh
+   npm publish --access public
+   ```
+
+2. On npmjs.com, open the package → **Settings** → **Publishing access** →
+   **Add trusted publisher** (GitHub Actions):
+
+   | Field | Value |
+   | --- | --- |
+   | Owner | `codetime-dev` |
+   | Repository | `dsh-codetime` |
+   | Workflow | `.github/workflows/publish.yml` |
+
+   Leave **Environment** empty.
+
+### Release a version
+
+```sh
+npm version patch          # or: minor / major — bumps package.json, commits, tags vX.Y.Z
+git push --follow-tags
+```
+
+Pushing the `v*` tag triggers [`publish.yml`](.github/workflows/publish.yml),
+which runs `npm publish --provenance --access public`. You can also trigger it
+manually from the repository's **Actions** tab.
+
