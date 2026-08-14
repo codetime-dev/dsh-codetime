@@ -1,11 +1,12 @@
-# CodeTime backend patch — merge this `insert` into your profile's
-# `cordis.patch.yml` (or `$DSH_HOME/cordis.patch.yml`), after the dsh-base and
-# dsh-web-app bundle layers.
+# CodeTime backend patch — merge this into your profile's `cordis.patch.yml`
+# (or `$DSH_HOME/cordis.patch.yml`), after the dsh-base and dsh-web-app bundle
+# layers.
 #
 # The `sessionTelemetry` service is a process-global singleton: exactly ONE
-# telemetry backend may be mounted. If `session-telemetry-otel` is also enabled
-# in your composition, pick one — mounting both throws on the second
-# registration. (To keep both, compose a fan-out backend instead of two rows.)
+# telemetry backend may register it. The base bundle mounts
+# `session-telemetry-otel` (DISABLED by default, but it still registers the
+# Service), so it MUST be disabled before `session-telemetry-codetime` mounts —
+# otherwise the second registration throws at boot.
 #
 # Token resolution (first match wins):
 #   1. `token:` config below
@@ -14,15 +15,18 @@
 #      and the Zed / VS Code extensions)
 # API base URL defaults to `https://codetime.dev`, overridable with
 # `apiUrl:` below or the `CODETIME_API_URL` environment variable.
+- id: session-telemetry-otel
+  disabled: true
+
 - insert:
     - id: session-telemetry-codetime
       name: 'dsh-codetime'
       config:
         # FULL: capture every session event live. DISABLED: report nothing.
         # FEEDBACK_ONLY: only hand over the session log when a `/feedback`
-        # record is saved. Explicit opt-in; default DISABLED.
+        # record is saved.
         mode: !!js process.env.CODETIME_MODE || 'FULL'
         apiUrl: !!js process.env.CODETIME_API_URL || 'https://codetime.dev'
-        token: !!js process.env.CODETIME_TOKEN || undefined
         flushIntervalMs: 60000
         shutdownTimeoutMs: 5000
+

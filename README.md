@@ -61,24 +61,25 @@ dsh plugin --profile web add dsh-codetime
 Then merge the row from [`cordis.patch.yml`](./cordis.patch.yml) into your
 profile's `cordis.patch.yml` (or `$DSH_HOME/cordis.patch.yml`).
 
-> ⚠️ `sessionTelemetry` is a singleton — one backend per process. If your
-> composition already enables `session-telemetry-otel`, disable it or pick one.
+> ⚠️ `sessionTelemetry` is a singleton — one backend per process. The base
+> bundle always mounts `session-telemetry-otel` (even in its default `DISABLED`
+> mode it registers the Service), so **disable it** before mounting this backend
+> — the shipped [`cordis.patch.yml`](./cordis.patch.yml) already does both.
 
 ## Configuration
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `mode` | `DISABLED` | `FULL` (live capture), `FEEDBACK_ONLY` (capture on `/feedback`), or `DISABLED`. |
+| `mode` | `FULL` (in the shipped patch) | `FULL` (live capture), `FEEDBACK_ONLY` (capture on `/feedback`), or `DISABLED`. The backend itself defaults to `DISABLED` when the key is absent. |
 | `apiUrl` | `https://codetime.dev` | API base URL. |
-| `token` | — | Bearer token. |
 | `flushIntervalMs` | `60000` | Rollup flush cadence. |
 | `shutdownTimeoutMs` | `5000` | Upper bound on the final drain at teardown. |
 
-Token resolution (first match wins): `token:` config → `CODETIME_TOKEN` env →
-`~/.codetime/config.json`. If you already signed in with the codetime CLI or
-another editor extension, the shared `~/.codetime/config.json` token is picked
-up automatically. The `machine-id` in `~/.codetime/machine-id` identifies the
-machine on the dashboard (created on first use, shared with the CLI).
+Token resolution (first match wins): `CODETIME_TOKEN` env →
+`~/.codetime/config.json` token. If you already signed in with the codetime CLI
+or another editor extension, the shared `~/.codetime/config.json` token is
+picked up automatically. The `machine-id` in `~/.codetime/machine-id` identifies
+the machine on the dashboard (created on first use, shared with the CLI).
 
 ## Limitations
 
