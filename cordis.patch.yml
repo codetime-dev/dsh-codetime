@@ -1,10 +1,10 @@
 # CodeTime backend patch — merge this into your profile's `cordis.patch.yml`
 # (or `$DSH_HOME/cordis.patch.yml`), after the dsh-base and dsh-web-app bundle
-# layers.
+# layers. Verified against dsh 0.2.0-rc.2.
 #
 # The `sessionTelemetry` service is a process-global singleton: exactly ONE
 # telemetry backend may register it. The base bundle mounts
-# `session-telemetry-otel` (DISABLED by default, but it still registers the
+# `session-telemetry-otel` (its FEEDBACK_ONLY default still registers the
 # Service), so it MUST be disabled before `session-telemetry-codetime` mounts —
 # otherwise the second registration throws at boot.
 #
@@ -23,8 +23,8 @@
       name: 'dsh-codetime'
       config:
         # FULL: capture every session event live. DISABLED: report nothing.
-        # FEEDBACK_ONLY: only hand over the session log when a `/feedback`
-        # record is saved.
+        # FEEDBACK_ONLY: hand over the whole session log only once a
+        # `/feedback` record is saved. Any other value aborts the boot.
         mode: !!js process.env.CODETIME_MODE || 'FULL'
         apiUrl: !!js process.env.CODETIME_API_URL || 'https://codetime.dev'
         flushIntervalMs: 60000
