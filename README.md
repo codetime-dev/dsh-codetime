@@ -64,14 +64,22 @@ happened. `session.cwd` becomes the codetime `project` and `workspaceId`.
 ## Install & wire
 
 The package is a **host-plane** plugin (a process-global `sessionTelemetry`
-Service). Install it into your profile and add one row to the composition.
+Service) shipped as a dsh **bundle**, so one command is the whole install:
 
 ```sh
 dsh plugin --profile web add dsh-codetime
 ```
 
-Then merge the rows from [`cordis.patch.yml`](./cordis.patch.yml) into your
-profile's `cordis.patch.yml` (or `$DSH_HOME/cordis.patch.yml`).
+`package.json` declares the bundle:
+
+```json
+"dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+```
+
+dsh reconciles the profile's `dsh.profile.bundles` against its installed
+packages and appends `dsh-codetime` to the bundle stack; the profile boot then
+merges [`cordis.patch.yml`](./cordis.patch.yml) exactly like a manual mount
+line. Nothing has to be edited by hand.
 
 To run a checkout before the next npm release, add the directory instead of the
 package name (`pnpm` installs it as a local link):
@@ -79,6 +87,15 @@ package name (`pnpm` installs it as a local link):
 ```sh
 dsh plugin --profile web add /path/to/dsh-codetime      # or E:\path\to\dsh-codetime
 ```
+
+<details>
+<summary>Manual mount (for a non-bundle setup)</summary>
+
+Merge the rows from [`cordis.patch.yml`](./cordis.patch.yml) into your profile's
+`cordis.patch.yml` (or `$DSH_HOME/cordis.patch.yml`) after the `dsh-base` and
+`dsh-web-app` layers.
+
+</details>
 
 > ⚠️ `sessionTelemetry` is a singleton — one backend per process. The base
 > bundle always mounts `session-telemetry-otel` (even in its default
@@ -88,13 +105,14 @@ dsh plugin --profile web add /path/to/dsh-codetime      # or E:\path\to\dsh-code
 
 ### Installability
 
-dsh `0.2.0-rc.2` inspects a plugin's `@deepseek-ai/dsh*` `peerDependencies`
-before installing it and refuses the install when they do not satisfy the
-running runtime. Those packages are supplied by the host profile, not by this
-package, so the peers are declared as `*` — the convention the other
-out-of-repo dsh plugins use. Pinning a prerelease range (`^0.1.0-rc.6`) makes
-the next dsh prerelease reject the plugin outright; `npm test` asserts the
-running runtime accepts this manifest.
+dsh `0.2.x` applies two gates before a package becomes a plugin. `npm test`
+asserts both against the running runtime:
+
+| Gate | Requirement |
+| --- | --- |
+| Shape | The package must declare `dsh.bundle.patch` naming its patch file (or an ordered list). Without it the install is refused with `not-a-bundle` / `<name> declares no dsh.bundle`, or the package lands as a plain dependency that never becomes a profile layer. |
+| Peers | Every `@deepseek-ai/dsh*` `peerDependencies` range must satisfy the running dsh version (`evaluatePluginCompatibility`). These packages are supplied by the host profile, not by this package, so the peers are declared as `*` — the convention the other out-of-repo dsh plugins use. Pinning a prerelease range (`^0.1.0-rc.6`) makes the next dsh prerelease reject the plugin outright. |
+
 
 ## Configuration
 
@@ -145,7 +163,8 @@ npm test
 
 The suite boots the backend on a real cordis app with the genuine `sessions` and
 `timer` services, drives real `Session` appends through the seam, and asserts the
-captured ingest requests — plus the dsh install-compatibility gate itself.
+captured ingest requests — plus both dsh install gates (`dsh.bundle` shape and
+peer compatibility) and the parsed bundle patch itself.
 
 ## Publishing (npm)
 

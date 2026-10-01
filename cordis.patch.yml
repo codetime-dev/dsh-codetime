@@ -1,12 +1,22 @@
-# CodeTime backend patch — merge this into your profile's `cordis.patch.yml`
-# (or `$DSH_HOME/cordis.patch.yml`), after the dsh-base and dsh-web-app bundle
-# layers. Verified against dsh 0.2.0-rc.2.
+# dsh-codetime bundle patch — the `dsh.bundle.patch` layer of the published
+# package. Verified against dsh 0.2.0-rc.2.
+#
+# Installing the plugin through the official CLI:
+#
+#   dsh plugin --profile <name> add dsh-codetime
+#
+# reconciles the profile's `dsh.profile.bundles` against its installed
+# packages; seeing the `dsh.bundle` declaration in package.json it appends
+# `dsh-codetime` to the bundle stack, and the profile boot merges THIS file
+# exactly like a manual `cordis.patch.yml` mount line. The same rows can still
+# be merged by hand into a profile's own `cordis.patch.yml`.
 #
 # The `sessionTelemetry` service is a process-global singleton: exactly ONE
 # telemetry backend may register it. The base bundle mounts
 # `session-telemetry-otel` (its FEEDBACK_ONLY default still registers the
 # Service), so it MUST be disabled before `session-telemetry-codetime` mounts —
-# otherwise the second registration throws at boot.
+# otherwise the second registration throws at boot. This layer sits after
+# `@deepseek-ai/dsh-base` in the bundle stack, so the override lands on top.
 #
 # Token resolution (first match wins):
 #   1. `token:` config below

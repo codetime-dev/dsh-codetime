@@ -1,16 +1,51 @@
-// The one gate that decides whether DSH will install this plugin at all:
-// `@deepseek-ai/dsh-app-boot`'s plugin compatibility check rejects a plugin
-// whose `@deepseek-ai/dsh*` peer ranges do not satisfy the running runtime.
+// The gates that decide whether DSH will install this plugin at all:
+// `@deepseek-ai/dsh-app-boot` refuses a package that declares no
+// `dsh.bundle.patch` ("declares no dsh.bundle"), and refuses any
+// `@deepseek-ai/dsh*` peer range that does not satisfy the running runtime.
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { Context } from "@deepseek-ai/cordis";
 import TimerService from "@deepseek-ai/cordis-plugin-timer";
 import SessionStore from "@deepseek-ai/dsh-session";
-import { evaluatePluginCompatibility, getDshRuntimeVersion } from "@deepseek-ai/dsh-app-boot";
+import {
+  bundlePatchFiles,
+  bundlePatchPaths,
+  evaluatePluginCompatibility,
+  getDshRuntimeVersion,
+  loadOverlayPatches,
+} from "@deepseek-ai/dsh-app-boot";
 import CodetimeSessionBackend, { buildSessionRollup } from "../lib/index.js";
 
+const packageDir = fileURLToPath(new URL("..", import.meta.url));
 const manifest = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+
+test("the package is installable as a dsh bundle", () => {
+  const bundle = manifest.dsh?.bundle;
+  assert.ok(bundle, "package.json must declare dsh.bundle or dsh refuses it as `not-a-bundle`");
+  assert.deepEqual(bundlePatchFiles(bundle), ["./cordis.patch.yml"]);
+  const [patchPath] = bundlePatchPaths(packageDir, bundle);
+  assert.ok(existsSync(patchPath), `the declared bundle patch must exist: ${patchPath}`);
+  assert.ok(manifest.files.includes("cordis.patch.yml"), "the declared patch must ship in the published tarball");
+});
+
+test("the bundle patch mounts the backend over the otel default", () => {
+  const [patchPath] = bundlePatchPaths(packageDir, manifest.dsh.bundle);
+  const patches = loadOverlayPatches(manifest.name, patchPath);
+
+  const otel = patches.find((row) => row.id === "session-telemetry-otel");
+  assert.equal(otel?.disabled, true, "the sessionTelemetry singleton must be released before this backend mounts");
+
+  const row = patches.flatMap((entry) => entry.insert ?? []).find((entry) => entry.id === "session-telemetry-codetime");
+  assert.ok(row, "the bundle patch must insert the plugin row");
+  assert.equal(row.name, manifest.name);
+  assert.equal(row.config.mode.__jsExpr, "process.env.CODETIME_MODE || 'FULL'");
+  assert.equal(row.config.apiUrl.__jsExpr, "process.env.CODETIME_API_URL || 'https://codetime.dev'");
+  assert.equal(row.config.flushIntervalMs, 60_000);
+  assert.equal(row.config.shutdownTimeoutMs, 5_000);
+});
+
 
 test("the running dsh runtime accepts this plugin's dsh peers", () => {
   const runtimeVersion = getDshRuntimeVersion();
